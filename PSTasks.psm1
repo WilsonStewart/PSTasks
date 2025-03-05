@@ -7,45 +7,45 @@ function kan {
         $CompleteTask
 
     )
-    DynamicParam {
-        $NameParam = New-RuntimeDefinedParameter `
-            -ParameterName "Name" `
-            -ValidateSetGetterScriptBlock { (Get-PSTask).Name }
+    # DynamicParam {
+    #     $NameParam = New-RuntimeDefinedParameter `
+    #         -ParameterName "Name" `
+    #         -ValidateSetGetterScriptBlock { (Get-PSTask).Name }
 
-        $IdParam = New-RuntimeDefinedParameter `
-            -ParameterName "Id" `
-            -ValidateSetGetterScriptBlock { (Get-PSTask).Id }
+    #     $IdParam = New-RuntimeDefinedParameter `
+    #         -ParameterName "Id" `
+    #         -ValidateSetGetterScriptBlock { (Get-PSTask).Id }
 
-        Export-RuntimeDefinedParameterDictionary -RuntimeDefinedParameters $NameParam, $IdParam
-    }
+    #     Export-RuntimeDefinedParameterDictionary -RuntimeDefinedParameters $NameParam, $IdParam
+    # }
 
-    begin {
-        $Name = $PsBoundParameters["Name"]
-        $Id = $PsBoundParameters["Id"]
-    }
+    # begin {
+    #     $Name = $PsBoundParameters["Name"]
+    #     $Id = $PsBoundParameters["Id"]
+    # }
     process {
-        Initialize-PSTasks
+        # Initialize-PSTasks
 
-        $Data = Get-PSTasksData
+        # $Data = Get-PSTasksData
 
-        if (
-            ($PsCmdlet.ParameterSetName -eq "CompleteTask") `
-                -or `
-            ($PsCmdlet.ParameterSetName -eq "GetTask")
-        ) {
-            if ($Id) {
-                $Task = $Data.Tasks | Where-Object { $_.Id -eq $Id }
-            }
-            elseif ($Name) {
-                $Task = $Data.Tasks | Where-Object { $_.Name -eq $Name }
-            }
-            else { throw "Please provide an Id or a Name of a task."; break }
-        }
+        # if (
+        #     ($PsCmdlet.ParameterSetName -eq "CompleteTask") `
+        #         -or `
+        #     ($PsCmdlet.ParameterSetName -eq "GetTask")
+        # ) {
+        #     if ($Id) {
+        #         $Task = $Data.Tasks | Where-Object { $_.Id -eq $Id }
+        #     }
+        #     elseif ($Name) {
+        #         $Task = $Data.Tasks | Where-Object { $_.Name -eq $Name }
+        #     }
+        #     else { throw "Please provide an Id or a Name of a task."; break }
+        # }
 
         switch ($PsCmdlet.ParameterSetName) {
             "CompleteTask" { $Task.Status = "Completed"; Write-Host "Completed '[$($Task.Id)] $($Task.Name)'." }
             default {
-                Draw-KanBoard -Columns @("New", "Old", "Weird") -ColumnItems @(
+                Draw-KanBoard -Columns @("New", "Old", "Completed") -ColumnItems @(
                     @{
                         Status = "New"
                         Id     = 1
@@ -108,10 +108,7 @@ function Draw-KanBoard {
         $Columns,
         $ColumnItems
     )
-
     Clear-Host
-
-
 
     $HDL = [System.Char]::ConvertFromUtf32([System.Convert]::toInt32("02550", 16))
     $VDL = [System.Char]::ConvertFromUtf32([System.Convert]::toInt32("02551", 16))
@@ -122,7 +119,7 @@ function Draw-KanBoard {
     $TDL = [System.Char]::ConvertFromUtf32([System.Convert]::toInt32("02566", 16))
     $ITDL = [System.Char]::ConvertFromUtf32([System.Convert]::toInt32("02569", 16))
     
-    $Data = Get-PSTasksData
+    # $Data = Get-PSTasksData
 
     $ColumnsHashTables = @()
 
@@ -328,57 +325,57 @@ function Initialize-PSTasks {
         [switch]
         $Force
     )
-    if (
-        (!(Get-ItemPropertyValue -Path "HKCU:\Software\com.bellbellbell\PSTasks" -Name "IsInitialized")) `
-            -or `
-        ($Force)
-    ) {
-        Write-Host "Initializing PSTasks..."
+    # if (
+    #     (!(Get-ItemPropertyValue -Path "HKCU:\Software\com.bellbellbell\PSTasks" -Name "IsInitialized")) `
+    #         -or `
+    #     ($Force)
+    # ) {
+    #     Write-Host "Initializing PSTasks..."
 
-        if (!(Test-Path "HKCU:\Software\com.bellbellbell")) { New-Item -Force -Path "HKCU:\Software\com.bellbellbell" }
-        if (!(Test-Path "HKCU:\Software\com.bellbellbell\PSTasks")) { New-Item -Force -Path "HKCU:\Software\com.bellbellbell\PSTasks" }
+    #     if (!(Test-Path "HKCU:\Software\com.bellbellbell")) { New-Item -Force -Path "HKCU:\Software\com.bellbellbell" }
+    #     if (!(Test-Path "HKCU:\Software\com.bellbellbell\PSTasks")) { New-Item -Force -Path "HKCU:\Software\com.bellbellbell\PSTasks" }
     
-        $PSTasksJsonPath = $false
-        $PSTasksJsonPath = Get-ItemPropertyValue -ErrorAction Ignore -Path "HKCU:\Software\com.bellbellbell\PSTasks" -Name "PSTasksJsonPath"
+    #     $PSTasksJsonPath = $false
+    #     $PSTasksJsonPath = Get-ItemPropertyValue -ErrorAction Ignore -Path "HKCU:\Software\com.bellbellbell\PSTasks" -Name "PSTasksJsonPath"
     
-        if ($PSTasksJsonPath) {
-            if (!(Test-Path $PSTasksJsonPath)) {
-                $response = Invoke-UserPromptWithInputLoopUntilSuccess `
-                    -PromptText "It looks like you have previously setup a pstasks.json file at the path '$PSTasksJsonPath'. However, there doesn't seem to be any pstasks.json file there currently. Should it be re-created at this location?" `
-                    -LimitResponses
+    #     if ($PSTasksJsonPath) {
+    #         if (!(Test-Path $PSTasksJsonPath)) {
+    #             $response = Invoke-UserPromptWithInputLoopUntilSuccess `
+    #                 -PromptText "It looks like you have previously setup a pstasks.json file at the path '$PSTasksJsonPath'. However, there doesn't seem to be any pstasks.json file there currently. Should it be re-created at this location?" `
+    #                 -LimitResponses
     
-                if ($response -eq "n") {
-                    $response = Invoke-UserPromptWithInputLoopUntilSuccess `
-                        -PromptText "Enter the full path of where you want to create the json file (including the filename ending in .json)" `
-                        -AllowAnyResponse `
-                        -ConfirmResponse
-                    $PSTasksJsonPath = $response
-                }
-            }
-        }
-        elseif (!$PSTasksJsonPath) {
-            $response = Invoke-UserPromptWithInputLoopUntilSuccess `
-                -PromptText "It looks like you have not setup a pstasks.json file yet. Would you like to create one in your home directory?" `
-                -LimitResponses
+    #             if ($response -eq "n") {
+    #                 $response = Invoke-UserPromptWithInputLoopUntilSuccess `
+    #                     -PromptText "Enter the full path of where you want to create the json file (including the filename ending in .json)" `
+    #                     -AllowAnyResponse `
+    #                     -ConfirmResponse
+    #                 $PSTasksJsonPath = $response
+    #             }
+    #         }
+    #     }
+    #     elseif (!$PSTasksJsonPath) {
+    #         $response = Invoke-UserPromptWithInputLoopUntilSuccess `
+    #             -PromptText "It looks like you have not setup a pstasks.json file yet. Would you like to create one in your home directory?" `
+    #             -LimitResponses
     
-            if ($response -eq "y") {
-                New-Item -Force -Path "Env:\PSTasksTaskFilePath" -Value "$env:USERPROFILE\pstasks.json"
-                $PSTasksJsonPath = "$env:USERPROFILE\pstasks.json"
-            }
-            elseif ($response -eq "n") {
-                $response = Invoke-UserPromptWithInputLoopUntilSuccess `
-                    -PromptText "Enter the full path of where you want to create the json file (including the filename ending in .json)" `
-                    -AllowAnyResponse `
-                    -ConfirmResponse
+    #         if ($response -eq "y") {
+    #             New-Item -Force -Path "Env:\PSTasksTaskFilePath" -Value "$env:USERPROFILE\pstasks.json"
+    #             $PSTasksJsonPath = "$env:USERPROFILE\pstasks.json"
+    #         }
+    #         elseif ($response -eq "n") {
+    #             $response = Invoke-UserPromptWithInputLoopUntilSuccess `
+    #                 -PromptText "Enter the full path of where you want to create the json file (including the filename ending in .json)" `
+    #                 -AllowAnyResponse `
+    #                 -ConfirmResponse
     
-                $PSTasksJsonPath = $response
-            }
-        }
+    #             $PSTasksJsonPath = $response
+    #         }
+    #     }
     
-        if (!(Test-Path -Path $PSTasksJsonPath)) { Copy-Item -Force -Path "$PSScriptRoot\pstasks.json.template" -Destination $PSTasksJsonPath | Out-Null }
-        Set-ItemProperty -Force -Path "HKCU:\Software\com.bellbellbell\PSTasks" -Name "PSTasksJsonPath" -Type String -Value $PSTasksJsonPath | Out-Null
-        Set-ItemProperty -Force -Path "HKCU:\Software\com.bellbellbell\PSTasks" -Name "IsInitialized" -Value "$true" | Out-Null
-    }
+    #     if (!(Test-Path -Path $PSTasksJsonPath)) { Copy-Item -Force -Path "$PSScriptRoot\pstasks.json.template" -Destination $PSTasksJsonPath | Out-Null }
+    #     Set-ItemProperty -Force -Path "HKCU:\Software\com.bellbellbell\PSTasks" -Name "PSTasksJsonPath" -Type String -Value $PSTasksJsonPath | Out-Null
+    #     Set-ItemProperty -Force -Path "HKCU:\Software\com.bellbellbell\PSTasks" -Name "IsInitialized" -Value "$true" | Out-Null
+    # }
 }
 
 function Invoke-UserPromptWithInputLoopUntilSuccess {
@@ -438,20 +435,20 @@ function Invoke-UserPromptWithInputLoopUntilSuccess {
     return $ProvidedResponse
 }
 
-function Get-PSTasksData {
-    return ConvertFrom-Json -InputObject (Get-Content -Path $(Get-ItemPropertyValue -Path "HKCU:\Software\com.bellbellbell\PSTasks" -Name "PSTasksJsonPath") | Out-String) 
-}
+# function Get-PSTasksData {
+#     return ConvertFrom-Json -InputObject (Get-Content -Path $(Get-ItemPropertyValue -Path "HKCU:\Software\com.bellbellbell\PSTasks" -Name "PSTasksJsonPath") | Out-String) 
+# }
 
-function Set-PSTasksData {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory, ValueFromPipeline)]
-        [PSCustomObject]
-        $ConfigObject
-    )
+# function Set-PSTasksData {
+#     [CmdletBinding()]
+#     param (
+#         [Parameter(Mandatory, ValueFromPipeline)]
+#         [PSCustomObject]
+#         $ConfigObject
+#     )
 
-    Set-Content -Value (ConvertTo-Json $ConfigObject) -Path $(Get-ItemPropertyValue -Path "HKCU:\Software\com.bellbellbell\PSTasks" -Name "PSTasksJsonPath")
-}
+#     Set-Content -Value (ConvertTo-Json $ConfigObject) -Path $(Get-ItemPropertyValue -Path "HKCU:\Software\com.bellbellbell\PSTasks" -Name "PSTasksJsonPath")
+# }
 
 function New-RuntimeDefinedParameter {
     [CmdletBinding()]
