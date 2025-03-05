@@ -44,9 +44,118 @@ function kan {
 
         switch ($PsCmdlet.ParameterSetName) {
             "CompleteTask" { $Task.Status = "Completed"; Write-Host "Completed '[$($Task.Id)] $($Task.Name)'." }
-            default { $Data.Tasks | Where-Object { $_.Status -ne "Completed" } }
+            default {
+                Draw-KanBoard -Columns @("New", "Old", "Weird") -ColumnItems @(
+                    @{
+                        Status = "New"
+                        Id     = 1
+                        Name   = "Get the milk"
+                    },
+                    @{
+                        Status = "New"
+                        Id     = 2
+                        Name   = "Get the eggs"
+                    },
+                    @{
+                        Status = "Old"
+                        Id     = 3
+                        Name   = "Make some money"
+                    },
+                    @{
+                        Status = "New"
+                        Id     = 3
+                        Name   = "Be a BOSSSSSSS"
+                    },
+                    @{
+                        Status = "Weird"
+                        Id     = 3
+                        Name   = "Be a BOSSSSSSS"
+                    },
+                    @{
+                        Status = "Weird"
+                        Id     = 3
+                        Name   = "Be a BOSSSSSSS"
+                    },
+                    @{
+                        Status = "Weird"
+                        Id     = 3
+                        Name   = "Be a BOSSSSSSS"
+                    },
+                    @{
+                        Status = "Weird"
+                        Id     = 3
+                        Name   = "Be a BOSSSSSSS"
+                    },
+                    @{
+                        Status = "Weird"
+                        Id     = 3
+                        Name   = "Be a BOSSSSSSS"
+                    },
+                    @{
+                        Status = "Weird"
+                        Id     = 3
+                        Name   = "Be a BOSSSSSSS"
+                    }
+                )
+            }
         }
     }
+}
+
+function Draw-KanBoard {
+    [CmdletBinding()]
+    param (
+        $Columns,
+        $ColumnItems
+    )
+
+    Clear-Host
+
+
+
+    $HDL = [System.Char]::ConvertFromUtf32([System.Convert]::toInt32("02550", 16))
+    $VDL = [System.Char]::ConvertFromUtf32([System.Convert]::toInt32("02551", 16))
+    $ULDL = [System.Char]::ConvertFromUtf32([System.Convert]::toInt32("02554", 16))
+    $URDL = [System.Char]::ConvertFromUtf32([System.Convert]::toInt32("02557", 16))
+    $LLDL = [System.Char]::ConvertFromUtf32([System.Convert]::toInt32("0255A", 16))
+    $LRDL = [System.Char]::ConvertFromUtf32([System.Convert]::toInt32("0255D", 16))
+    $TDL = [System.Char]::ConvertFromUtf32([System.Convert]::toInt32("02566", 16))
+    $ITDL = [System.Char]::ConvertFromUtf32([System.Convert]::toInt32("02569", 16))
+    
+    $Data = Get-PSTasksData
+
+    $ColumnsHashTables = @()
+
+    foreach ($Column in $Columns) {
+        $ColumnsHashTables += @{
+            Name       = $Column
+            NameLength = $Column.Length
+            Width      = (($ColumnItems | Where-Object { $_.Status -eq $Column }).Name | Measure-Object -Maximum -Property Length).Maximum `
+                ? ((($ColumnItems | Where-Object { $_.Status -eq $Column }).Name | Measure-Object -Maximum -Property Length).Maximum) `
+                : 16
+        }
+    }
+
+    $ColumnTitlesTopLine = "$ULDL"; $ColumnsHashTables | ForEach-Object { $ColumnTitlesTopLine += "$($HDL * ($_.Width))$TDL" }; $ColumnTitlesTopLine = $ColumnTitlesTopLine.TrimEnd($TDL); $ColumnTitlesTopLine += "$URDL"
+
+    $ColumnTitlesMiddleLine = "$VDL"
+    foreach ($Column in $ColumnsHashTables) {
+        $ColumnTitlesMiddleLine += "$(PadForCenterAlign $Column.Name $Column.Width)$VDL"
+    }
+
+    $ColumnTitlesBottomLine = "$LLDL"; $ColumnsHashTables | ForEach-Object { $ColumnTitlesBottomLine += "$($HDL * ($_.Width))$ITDL" }; $ColumnTitlesBottomLine = $ColumnTitlesBottomLine.TrimEnd($ITDL); $ColumnTitlesBottomLine += "$LRDL"
+
+    # $(foreach ($C in $Columns) { (($ColumnItems | Where-Object { $_.Status -eq $C })).Occurrences })
+
+    $ItemsLinesToDraw = $(foreach ($C in $Columns) { ($ColumnItems | Where-Object { $_.Status -eq $C }).Length }) | Sort-Object -Descending | Select-Object -First 1
+    $ListsOfItemsListsToDraw = @()
+    
+ 
+    Write-Host @"
+$ColumnTitlesTopLine
+$ColumnTitlesMiddleLine
+$ColumnTitlesBottomLine
+"@
 }
 
 function New-PSTask {
@@ -392,5 +501,16 @@ function Export-RuntimeDefinedParameterDictionary {
     foreach ($RP in $RuntimeDefinedParameters) { $RuntimeParameterDictionary.Add($RP.Name, $RP.Parameter) }
     return $RuntimeParameterDictionary
 }
+
+function IsEven($number) { return $number % 2 -eq 0 }
+function MakeEvenAddOne($number) { if (IsEven($number)) { $number } else { $number + 1 } }
+function PadForCenterAlign([string]$Text, $Width) {
+    $LeftWhiteSpace = ($Width - $Text.Length) * 0.5
+    $RightWhiteSpace = ($Width - $Text.Length) * 0.5; 
+    if ((($Width - $Text.Length) % 2 -ne 0)) { $LeftWhiteSpace -= 0.5; $RightWhiteSpace += 0.5 }
+    return "$(" " * $LeftWhiteSpace)$Text$(" " * $RightWhiteSpace)"
+}
+
+function PadForLeftAlign($Text, $Width) { return "$Text$(" " * ($Width - $Text.Length))" }
 
 Export-ModuleMember -Function Get-PSTask, New-PSTask, Remove-PSTask, Set-PSTask, kan
